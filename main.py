@@ -3,13 +3,12 @@ from pyzbar.pyzbar import decode
 import RPi.GPIO as GPIO
 import time
 
-# ตั้งค่า GPIO สำหรับ Servo
+# === ตั้งค่า GPIO และ PWM สำหรับ Servo ===
 SERVO_PIN = 17
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(SERVO_PIN, GPIO.OUT)
 
-# PWM ที่ 50Hz สำหรับ servo
-servo = GPIO.PWM(SERVO_PIN, 50)
+servo = GPIO.PWM(SERVO_PIN, 50)  # 50Hz PWM
 servo.start(0)
 
 def set_angle(angle):
@@ -20,9 +19,13 @@ def set_angle(angle):
     GPIO.output(SERVO_PIN, False)
     servo.ChangeDutyCycle(0)
 
-# เปิดกล้อง
+# === เปิดกล้อง ===
 cap = cv2.VideoCapture(0)
-detected_data = ""
+
+# ใช้ตัวแปรนี้เพื่อป้องกันการตรวจ QR ซ้ำทันที
+last_detected = ""
+qr_active = False
+last_time = 0
 
 try:
     while True:
@@ -30,21 +33,35 @@ try:
         if not ret:
             break
 
-        # แปลงภาพเป็นขาวดำเพื่อ decode QR
-        for barcode in decode(frame):
-            qr_data = barcode.data.decode('utf-8')
-            if qr_data != detected_data:
-                print("QR Code Detected:", qr_data)
-                detected_data = qr_data
+        current_time = time.time()
 
-                # เมื่อสแกนเจอ QR Code ให้ servo หมุน
+        barcodes = decode(frame)
+
+        if barcodes:
+            qr_data = barcodes[0].data.decode('utf-8')
+
+            if not qr_active:
+                print(f"📷 QR Detected: {qr_data}")
+                qr_active = True
+                last_detected = qr_data
+                last_time = current_time
+
+                # หมุน servo
                 set_angle(90)
-                time.sleep(1)
-                set_angle(0)
+                print("🔧 Servo Activated")
+        else:
+            # เมื่อ QR หายไป ให้ reset การตรวจจับ
+            qr_active = False
+            last_detected = ""
 
-        # แสดงภาพจากกล้อง
-        cv2.imshow("QR Code Scanner", frame)
+        # ตรวจจับครบ 5 วินาทีแล้ว ให้ servo กลับตำแหน่งเดิม
+        if qr_active and (current_time - last_time >= 5):
+            set_angle(0)
+            print("🔁 Servo Reset")
+            qr_active = False  # รอ QR ใหม่
 
+        # แสดงภาพ
+        cv2.imshow("QR Scanner", frame)
         if cv2.waitKey(1) == ord('q'):
             break
 
