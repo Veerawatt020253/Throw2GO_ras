@@ -50,8 +50,8 @@ try:
                 qr_detected = True
                 last_time = current_time
 
-        # ถ้าหมุน servo แล้วครบ 5 นาที → หมุนกลับ
-        if qr_detected and (current_time - last_time >= 300):
+        # ถ้าหมุน servo แล้วครบ 5 วินาที → หมุนกลับ
+        if qr_detected and (current_time - last_time >= 5):
             set_angle(0)
             print("🔁 Servo Reset at", time.strftime("%H:%M:%S"))
             qr_detected = False
