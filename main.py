@@ -19,6 +19,10 @@ def set_angle(angle):
     GPIO.output(SERVO_PIN, False)
     servo.ChangeDutyCycle(0)
 
+# === เริ่มต้น: หมุน servo กลับตำแหน่ง 0 ===
+print("🔄 Initializing: Resetting servo to 0°")
+set_angle(0)
+
 # === เปิดกล้อง ===
 cap = cv2.VideoCapture(0)
 
@@ -39,7 +43,6 @@ try:
         if barcodes:
             qr_data = barcodes[0].data.decode('utf-8')
 
-            # ถ้ายังไม่ถูกเปิดอยู่
             if not qr_detected:
                 print(f"📷 QR Detected: {qr_data}")
                 set_angle(90)
@@ -47,13 +50,13 @@ try:
                 qr_detected = True
                 last_time = current_time
 
-        # ถ้าเปิด servo แล้วครบ 5 นาที (300 วินาที) → ปิด
+        # ถ้าหมุน servo แล้วครบ 5 นาที → หมุนกลับ
         if qr_detected and (current_time - last_time >= 300):
             set_angle(0)
             print("🔁 Servo Reset at", time.strftime("%H:%M:%S"))
             qr_detected = False
 
-        # แสดงภาพกล้อง
+        # แสดงภาพจากกล้อง
         cv2.imshow("QR Scanner", frame)
         if cv2.waitKey(1) == ord('q'):
             break
