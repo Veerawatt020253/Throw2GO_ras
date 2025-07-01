@@ -12,11 +12,8 @@ pwm.start(0)
 
 def set_angle(angle):
     duty = 2 + (angle / 18)
-    GPIO.output(servo_pin, True)
     pwm.ChangeDutyCycle(duty)
-    sleep(0.5)
-    GPIO.output(servo_pin, False)
-    pwm.ChangeDutyCycle(0)
+    sleep(0.5)  # ให้เวลามอเตอร์ขยับ
 
 # เริ่มต้นที่ 85 องศา
 print("เซอร์โวอยู่ที่ 85° รอ QR Code...")
@@ -44,10 +41,15 @@ try:
                 print("เปิดเซอร์โวไป 0°")
                 set_angle(0)
 
-        # แสดงภาพกล้อง (เอาออกถ้าไม่จำเป็น)
-        # cv2.imshow("Camera", frame)
-        # if cv2.waitKey(1) == ord("q"):
-        #     break
+                print("รอ 10 วินาที...")
+                sleep(10)
+
+                print("กลับไปที่ 85°")
+                set_angle(85)
+
+        cv2.imshow("Camera", frame)
+        if cv2.waitKey(1) == ord("q"):
+            break
 
 except KeyboardInterrupt:
     print("หยุดด้วย Ctrl+C")
