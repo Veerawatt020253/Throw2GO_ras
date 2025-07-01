@@ -1,10 +1,11 @@
 import RPi.GPIO as GPIO
+import cv2
+from pyzbar.pyzbar import decode
 from time import sleep
-import keyboard  # ใช้ library นี้เพื่ออ่านปุ่มจากคีย์บอร์ด
 
+# === ตั้งค่า GPIO ===
 GPIO.setmode(GPIO.BOARD)
-servo_pin = 11  # Physical Pin 11 (ถ้าใช้ BOARD)
-
+servo_pin = 11
 GPIO.setup(servo_pin, GPIO.OUT)
 pwm = GPIO.PWM(servo_pin, 50)  # 50Hz
 pwm.start(0)
@@ -17,23 +18,42 @@ def set_angle(angle):
     GPIO.output(servo_pin, False)
     pwm.ChangeDutyCycle(0)
 
+# เริ่มต้นที่ 85 องศา
+print("เซอร์โวอยู่ที่ 85° รอ QR Code...")
+set_angle(85)
+
+# === เปิดกล้อง ===
+cap = cv2.VideoCapture(0)
+cap.set(3, 640)  # ความกว้าง
+cap.set(4, 480)  # ความสูง
+
+found_qr = False
+
 try:
-    print("กด W เพื่อหมุนไป 85 องศา, กด S เพื่อกลับไป 0 องศา, กด ESC เพื่อออก")
     while True:
-        if keyboard.is_pressed('w'):
-            print("ไปที่ 85 องศา")
-            set_angle(85)
-            sleep(0.3)
-        elif keyboard.is_pressed('s'):
-            print("กลับที่ 0 องศา")
-            set_angle(0)
-            sleep(0.3)
-        elif keyboard.is_pressed('esc'):
-            print("ออกจากโปรแกรม")
-            break
+        success, frame = cap.read()
+        if not success:
+            continue
+
+        for code in decode(frame):
+            qr_data = code.data.decode("utf-8")
+            print(f"เจอ QR: {qr_data}")
+
+            if not found_qr:
+                found_qr = True
+                print("เปิดเซอร์โวไป 0°")
+                set_angle(0)
+
+        # แสดงภาพกล้อง (เอาออกถ้าไม่จำเป็น)
+        # cv2.imshow("Camera", frame)
+        # if cv2.waitKey(1) == ord("q"):
+        #     break
 
 except KeyboardInterrupt:
-    pass
+    print("หยุดด้วย Ctrl+C")
+
 finally:
+    cap.release()
+    cv2.destroyAllWindows()
     pwm.stop()
     GPIO.cleanup()
